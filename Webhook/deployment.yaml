@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+      - name: demo-container
+        image: nginx:latest
+        resources:
+          limits:
+            memory: "128Mi"   # Memory limit
+            cpu: "500m"        # CPU limit (0.5 cores)
+          requests:
+            memory: "128Mi"   # Memory request
+            cpu: "250m"        # CPU request (0.25 cores)

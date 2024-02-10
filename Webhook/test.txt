@@ -1,0 +1,3 @@
+curl -X POST -H "Content-Type: application/json" -d '{"maxMemory": 1150, "appName": "wsc","environment": "staging","region": "all-regions"}'  http://localhost:5000/webhook
+
+curl -X POST -H "Content-Type: application/json" -d '{"maxMemory": 100}'  http://localhost:5000/webhook
