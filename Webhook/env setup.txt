@@ -1,0 +1,20 @@
+install choco:
+..................................
+Set-ExecutionPolicy Bypass -Scope Process -Force
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+stall python:
+
+install git:
+..................................
+choco install git
+-- configure git:
+git config --global user.email "Sudipta.Mukherjee@TCSTEG.onmicrosoft.com"
+git config --global user.name "Sudipta M"
+
+install python:
+..................................
+choco install python
+
+install docker:
+..................................
+choco install docker-desktop
