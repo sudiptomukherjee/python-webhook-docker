@@ -1,24 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-deployment
+  name: webhook-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: demo
+      app: webhook
   template:
     metadata:
       labels:
-        app: demo
+        app: webhook
     spec:
       containers:
-      - name: demo-container
-        image: nginx:latest
+      - name: webhook-container
+        image: webhook:v14
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5000
+        env:
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-token-secret
+              key: GITHUB_TOKEN
+        - name: INSTRUMENTATION_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: webhook-configmap
+              key: instrumentation_key
+        - name: GITHUB_REPO_OWNER
+          valueFrom:
+            configMapKeyRef:
+              name: webhook-configmap
+              key: github_repo_owner
+        - name: GITHUB_REPO_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: webhook-configmap
+              key: github_repo_name
+        - name: FILE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: webhook-configmap
+              key: file_path
+        - name: BASE_BRANCH
+          valueFrom:
+            configMapKeyRef:
+              name: webhook-configmap
+              key: base_branch
         resources:
           limits:
-            memory: "128Mi"   # Memory limit
-            cpu: "500m"        # CPU limit (0.5 cores)
+            memory: "128Mi"
           requests:
-            memory: "128Mi"   # Memory request
-            cpu: "250m"        # CPU request (0.25 cores)
+            memory: "128Mi"
