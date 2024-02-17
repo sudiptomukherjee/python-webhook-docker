@@ -47,23 +47,40 @@ def log_success_azure(message):
     telemetry_client.track_trace(f'{message} - {current_datetime}')   
     telemetry_client.flush()
 
+# Logging messages
+msg_app_title = "Alert listener Webhook"
+msg_missing_token = f"{msg_app_title} - GITHUB_TOKEN was not found"
+msg_invalid_payload = f"{msg_app_title} - Invalid payload format. Missing field - maxMemory"
+msg_error = f"{msg_app_title} - An error has occurred"
+msg_extract_error = f"{msg_app_title} - Error extracting memory limit from GitHub"
+msg_rate_limit_error = f"{msg_app_title} - GitHub API rate limit exceeded. Rate limit details"
+msg_connection_error = f"{msg_app_title} - Error connecting to GitHub"
+msg_read_error = f"{msg_app_title} - Error reading file from GitHub"
+msg_branch_error = f"{msg_app_title} - Error creating branch in GitHub"
+msg_get_latest_error = f"{msg_app_title} - Error fetching latest files from GitHub"
+msg_update_success = f"{msg_app_title} - YAML manifest file updated successfully in GitHub"
+msg_update_error = f"{msg_app_title} - Error updating YAML manifest file in GitHub"
+msg_pr_title = f"{msg_app_title} - PR for updating memory limit and request"
+msg_pr_success = f"{msg_app_title} - PR created successfully in GitHub"
+msg_pr_error = f"{msg_app_title} - Error creating PR in GitHub"
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:        
         # proceed only if token is present
         if github_token is None:
-            log_event_azure("GITHUB_TOKEN was not found")
-            log_event_stdout("GITHUB_TOKEN was not found")
-            raise ValueError("GITHUB_TOKEN was not found")
+            log_event_azure(msg_missing_token)
+            log_event_stdout(msg_missing_token)
+            raise ValueError(msg_missing_token)
         # Parse JSON payload
         payload = request.get_json()
 
         # Null checks for payload parsing
         #if not payload or 'maxMemory' not in payload or 'appName' not in payload or 'environment' not in payload or 'region' not in payload:
         if 'maxMemory' not in payload:
-            log_event_azure("Invalid payload")
-            log_event_stdout("Invalid payload")
-            raise Exception("Invalid payload format. Required field: maxMemory")
+            log_event_azure(msg_invalid_payload)
+            log_event_stdout(msg_invalid_payload)
+            raise Exception(msg_invalid_payload)
 
         # Extract values from payload
         max_memory = payload.get('maxMemory')
@@ -84,13 +101,13 @@ def webhook():
                 # Update YAML manifest in the new branch
                 if update_yaml_manifest(file_path, new_memory_limit, branch_name):
                     # Create a pull request
-                    pr_title = f'Update Memory Limit and Request to {max_memory}'
+                    pr_title = msg_pr_title
                     create_pull_request(branch_name, pr_title)
                     return jsonify({"status": "success"})
 
     except Exception as e:
-        log_event_stdout(f"An error has occurred - {traceback.format_exc()}")
-        log_event_azure(f"An error has occurred - {traceback.format_exc()}")
+        log_event_stdout(f"{msg_error} - {traceback.format_exc()}")
+        log_event_azure(f"{msg_error} - {traceback.format_exc()}")
         log_exception_azure()
         return jsonify({"status": "error", "message": str(e)})
 
@@ -107,10 +124,10 @@ def extract_memory_limit(deployment_manifest):
         return 'Not found'
 
     except Exception as e:
-        log_event_azure(f"An error has occurred - {traceback.format_exc()}")
+        log_event_azure(f"{msg_extract_error} - {traceback.format_exc()}")
         log_exception_azure()
-        log_event_stdout("Error extracting memory limit")
-        raise Exception(f"Error extracting memory limit: {str(e)}")
+        log_event_stdout(msg_extract_error)
+        raise Exception(f"{msg_extract_error}: {str(e)}")
 
 def connect_to_github(api_url, headers):
     try:
@@ -123,20 +140,18 @@ def connect_to_github(api_url, headers):
                 'remaining': response.headers.get('X-RateLimit-Remaining'),
                 'reset_time': response.headers.get('X-RateLimit-Reset'),
             }            
-            raise Exception(f"GitHub API rate limit exceeded. Rate limit details: {rate_limit_info}")
+            raise Exception(f"{msg_rate_limit_error}: {rate_limit_info}")
         else:
-            raise Exception(f"Failed to connect to GitHub. Status code: {response.status_code}")
+            raise Exception(f"{msg_connection_error}. Status code: {response.status_code}")
 
     except Exception as e:
-        log_event_stdout("Error connecting to github")
-        log_event_azure(f"An error has occurred - {traceback.format_exc()}")
+        log_event_stdout(msg_connection_error)
+        log_event_azure(f"{msg_connection_error} - {traceback.format_exc()}")
         log_exception_azure()
-        raise Exception(f"Error connecting to GitHub: {str(e)}")
+        raise Exception(f"{msg_connection_error} : {str(e)}")
 
 def read_github_file(file_path):
     try:
-        log_event_stdout("Reading current memory limits")
-        log_event_azure(f"Reading current limit from Github")      
         # GitHub API details for reading a specific file
         github_api_url = f'https://api.github.com/repos/{github_repo_owner}/{github_repo_name}/contents/{file_path}'
 
@@ -154,15 +169,13 @@ def read_github_file(file_path):
         return {"status": "success", "memory_limit": memory_limit}
 
     except Exception as e:
-        log_event_stdout("Error reading memory limit")
-        log_event_azure(f"Error reading memory limit from Github - {traceback.format_exc()}")
+        log_event_stdout(msg_read_error)
+        log_event_azure(f"{msg_read_error} - {traceback.format_exc()}")
         log_exception_azure()
         return {"status": "error", "message": str(e)}
 
 def create_branch(file_path, branch_name):
     try:
-        log_event_stdout("Creating new branch in github")
-        log_event_azure(f"Creating new branch in Github")
         # GitHub API details to get the latest SHA of the base branch
         base_branch_sha_url = f'https://api.github.com/repos/{github_repo_owner}/{github_repo_name}/git/refs/heads/{base_branch}'
         headers = {
@@ -186,9 +199,9 @@ def create_branch(file_path, branch_name):
             
             return True
         else:
-            log_event_stdout("Error creating branch")
-            log_event_azure(f"Error creating branch - Status - {response.status_code}")
-            raise Exception(f"Failed to create branch '{branch_name}'. Status code: {response.status_code}")
+            log_event_stdout(msg_branch_error)
+            log_event_azure(f"{msg_branch_error}. Status code - {response.status_code}")
+            raise Exception(f"{msg_branch_error}. Status code: {response.status_code}")
 
     except Exception as e:
         log_event_stdout("Error creating branch")
@@ -198,8 +211,6 @@ def create_branch(file_path, branch_name):
 
 def fetch_latest_changes(branch_name):
     try:
-        log_event_stdout("Fetching latest from github")
-        log_event_azure(f"Fetching latest code from Github")
         fetch_api_url = f'https://api.github.com/repos/{github_repo_owner}/{github_repo_name}/git/refs/heads/{branch_name}'
         headers = {
             'Authorization': f'Bearer {github_token}',
@@ -208,15 +219,13 @@ def fetch_latest_changes(branch_name):
         response = connect_to_github(fetch_api_url, headers)
         return response.json()['object']['sha']
     except Exception as e:
-        log_event_stdout("Error fetch latest")
-        log_event_azure(f"Error fetching latest from Github - {traceback.format_exc()}")  
+        log_event_stdout(msg_get_latest_error)
+        log_event_azure(f"{msg_get_latest_error} - {traceback.format_exc()}")  
         log_exception_azure()      
         return None
 
 def update_yaml_manifest(file_path, new_memory_limit, branch_name):
     try:
-        log_event_stdout("Updating yaml in github")
-        log_event_azure(f"Updating yaml file in Github")        
         # Fetch the latest changes
         latest_commit_sha = fetch_latest_changes(branch_name)
 
@@ -255,7 +264,7 @@ def update_yaml_manifest(file_path, new_memory_limit, branch_name):
         updated_base64_content = b64encode(updated_content.encode('utf-8')).decode('utf-8')
 
         # Commit message
-        commit_message = f"Update memory limit to {new_memory_limit}Mi"
+        commit_message = f"{msg_pr_title} - {new_memory_limit}Mi"
 
         # Create a commit with the updated content
         commit_payload = {
@@ -268,25 +277,23 @@ def update_yaml_manifest(file_path, new_memory_limit, branch_name):
         commit_response = requests.put(update_file_api_url, headers=headers, json=commit_payload)
 
         if commit_response.status_code == 200:
-            log_event_stdout("yaml file updated successfully")
-            log_event_azure(f"Yaml file updated successfully")            
+            log_event_stdout(msg_update_success)
+            log_event_azure(msg_update_success)
             return True
         else:
-            log_event_stdout("Error updating yaml")
-            log_event_azure(f"Error updating yaml")
-            raise Exception(f"Failed to update YAML file in branch '{branch_name}'. Status code: {commit_response.status_code}")
+            log_event_stdout(msg_update_error)
+            log_event_azure(msg_update_error)
+            raise Exception(f"{msg_update_error} '{branch_name}'. Status code: {commit_response.status_code}")
 
     except Exception as e:
-        log_event_stdout("Error updating yaml")
-        log_event_azure(f"Error updating yaml - {traceback.format_exc()}")
+        log_event_stdout(msg_update_error)
+        log_event_azure(f"{msg_update_error} - {traceback.format_exc()}")
         log_exception_azure()
         return False
 
 
 def create_pull_request(branch_name, pr_title):
     try:
-        log_event_stdout("Creating PR")
-        log_event_azure(f"Creating PR")
         #GitHub API details for creating a pull request
         pr_api_url = f'https://api.github.com/repos/{github_repo_owner}/{github_repo_name}/pulls'
 
@@ -310,7 +317,7 @@ def create_pull_request(branch_name, pr_title):
             'title': pr_title,
             'head': branch_name,
             'base': base_branch,
-            'body': f'Pull request to update memory limit for {branch_name}',
+            'body': msg_pr_title,
             'maintainer_can_modify': True,
             'draft': False,
         }
@@ -318,16 +325,16 @@ def create_pull_request(branch_name, pr_title):
 
         if response.status_code == 201:
             pr_number = response.json()['number']
-            log_event_stdout("PR created successfully")
-            log_success_azure(f"PR created successfully - title - {pr_title}")
+            log_event_stdout(msg_pr_success)
+            log_success_azure(msg_pr_success)
         else:
-            log_event_stdout("Error creating PR")
-            log_event_azure(f"Error creating PR - {traceback.format_exc()}")
-            raise Exception(f"Failed to create pull request. Status code: {response.status_code}")
+            log_event_stdout(msg_pr_error)
+            log_event_azure(f"{msg_pr_error} - {traceback.format_exc()}")
+            raise Exception(f"{msg_pr_error}. Status code: {response.status_code}")
 
     except Exception as e:
-        log_event_stdout("Error creating PR")
-        log_event_azure(f"Error creating PR - {traceback.format_exc()}")
+        log_event_stdout(msg_pr_error)
+        log_event_azure(f"{msg_pr_error} - {traceback.format_exc()}")
         log_exception_azure()
 
 if __name__ == '__main__':

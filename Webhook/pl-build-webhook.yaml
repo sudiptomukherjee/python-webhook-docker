@@ -1,0 +1,26 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  dockerRegistryServiceConnection: 'svc_con_acr'
+  dockerfilePath: '$(Build.SourcesDirectory)/Webhook/Dockerfile'
+  imageRepository: 'webhook'
+  containerRegistry: 'acrsudiptademoeastus.azurecr.io'
+  
+steps:
+- task: Docker@2
+  displayName: Docker Login
+  inputs:
+    containerRegistry: '$(dockerRegistryServiceConnection)'
+    command: 'login'
+- task: Docker@2
+  displayName: Docker Build
+  inputs:
+    containerRegistry: '$(dockerRegistryServiceConnection)'
+    repository: 'containerRegistry/$(imageRepository)'
+    dockerfile: $(dockerfilePath)
+    command: 'build'
+    tags: '$(Build.BuildId)'
