@@ -1,0 +1,26 @@
+install azure-cli in ubuntu:
+...............................
+# Update the package index
+sudo apt-get update
+
+# Install the dependencies
+sudo apt-get install ca-certificates curl apt-transport-https lsb-release gnupg
+
+# Download and install the Microsoft signing key
+curl -sL https://packages.microsoft.com/keys/microsoft.asc |
+    gpg --dearmor |
+    sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+# Add the Azure CLI repository
+AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" |
+    sudo tee /etc/apt/sources.list.d/azure-cli.list
+
+# Update the package index again
+sudo apt-get update
+
+# Install the Azure CLI
+sudo apt-get install azure-cli
+
+# Verify the installation
+az --version

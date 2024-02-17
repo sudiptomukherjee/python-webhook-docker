@@ -1,0 +1,46 @@
+-- download version = 1.19.7
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.19.7 TARGET_ARCH=x86_64 sh -
+	-- download latest
+	curl -L https://istio.io/downloadIstio | sh -
+
+-- CD
+cd istio-1.19.7/
+
+-- add to path
+export PATH=$PWD/bin:$PATH
+
+-- check
+istioctl -h
+
+-- install istio
+istioctl install --set profile=demo -y
+
+--enable istio injection to namespace(default)
+kubectl label namespace default istio-injection=enabled
+
+-- verify istio installation:
+kubectl get pods -n istio-system
+
+-- analyze with istioctl
+istioctl analyze
+
+-- restart existing pods
+kubectl rollout restart deployment -n default
+
+-- check if istio containers are created
+kubectl get pod <pod-name> -o jsonpath="{.spec['containers','initContainers'][*].name}"
+
+-- addons 
+..........
+addons like kiali, jaeger, prometheus etc are in "/istio-1.19.7/samples/addons" folder
+	-- apply them if needed
+kubectl apply -f kiali.yaml
+	-- verify if the pods are running
+kubectl get pods -n istio-system
+	-- access dashboard
+istioctl dashboard kiali
+
+-- get IP of isto-ingressgateway and use nip.io for testing
+export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export INGRESS_DOMAIN=${INGRESS_HOST}.nip.io
+

@@ -51,18 +51,19 @@ def log_success_azure(message):
 msg_app_title = "Alert listener Webhook"
 msg_missing_token = f"{msg_app_title} - GITHUB_TOKEN was not found"
 msg_invalid_payload = f"{msg_app_title} - Invalid payload format. Missing field - maxMemory"
-msg_error = f"{msg_app_title} - An error has occurred"
 msg_extract_error = f"{msg_app_title} - Error extracting memory limit from GitHub"
 msg_rate_limit_error = f"{msg_app_title} - GitHub API rate limit exceeded. Rate limit details"
 msg_connection_error = f"{msg_app_title} - Error connecting to GitHub"
 msg_read_error = f"{msg_app_title} - Error reading file from GitHub"
+msg_branch_success = f"{msg_app_title} - Successfully created branch in GitHub"
 msg_branch_error = f"{msg_app_title} - Error creating branch in GitHub"
 msg_get_latest_error = f"{msg_app_title} - Error fetching latest files from GitHub"
 msg_update_success = f"{msg_app_title} - YAML manifest file updated successfully in GitHub"
 msg_update_error = f"{msg_app_title} - Error updating YAML manifest file in GitHub"
 msg_pr_title = f"{msg_app_title} - PR for updating memory limit and request"
-msg_pr_success = f"{msg_app_title} - PR created successfully in GitHub"
+msg_pr_success = f"{msg_app_title} - Successfully PR created in GitHub"
 msg_pr_error = f"{msg_app_title} - Error creating PR in GitHub"
+msg_error = f"{msg_app_title} - An error has occurred"
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -196,7 +197,8 @@ def create_branch(file_path, branch_name):
         response = requests.post(branch_api_url, headers=headers, json=payload)
 
         if response.status_code == 201:
-            
+            log_event_stdout(msg_branch_success)
+            log_event_azure(msg_branch_success)                        
             return True
         else:
             log_event_stdout(msg_branch_error)

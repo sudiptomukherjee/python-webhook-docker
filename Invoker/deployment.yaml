@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoker
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: invoker
+  template:
+    metadata:
+      labels:
+        app: invoker
+    spec:
+      containers:
+      - name: invoker-container
+        image: acrsudiptademoeastus.azurecr.io/invoker:v6
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "128Mi"
+          requests:
+            memory: "128Mi"

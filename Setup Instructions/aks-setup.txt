@@ -1,0 +1,84 @@
+create ACR:
+acrsudiptademoeastus.azurecr.io
+
+build docker image locally:
+docker build -t [name]:[tag] .
+e.g.
+docker build -t webhook:acr1 .
+
+tag image:
+docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+e.g.
+docker tag webhook:acr1 acrsudiptademoeastus.azurecr.io/webhook:v1
+
+login to ACR:
+az acr login --name acrsudiptademoeastus
+
+push the Docker image to your ACR: 
+docker push acrsudiptademoeastus.azurecr.io/webhook:v1
+
+create aks cluster:
+az aks create --resource-group <resource_group_name> --name <cluster_name> --node-count <node_count> --enable-addons monitoring --generate-ssh-keys
+az aks create --resource-group rg-sudipta-demo-eastus-001 --name aks-cluster-sudipta-1 --node-count 1 --enable-addons monitoring --generate-ssh-keys
+
+SSH key files '/home/azureuser/.ssh/id_rsa' and '/home/azureuser/.ssh/id_rsa.pub' have been generated under ~/.ssh to allow SSH access to the VM. If using machines without permanent storage like Azure Cloud Shell without an attached file share, back up your keys to a safe location
+
+get creds (sets cirrent context to aks cluster):
+az aks get-credentials --resource-group rg-sudipta-demo-eastus-001 --name aks-cluster-sudipta-1
+
+test:
+kubectl get nodes
+
+-- deploy apps to AKS:
+create the secret
+kubectl create secret generic github-token-secret --from-literal=GITHUB_TOKEN=<token>
+kubectl apply -f configmaps.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+
+-- allow AKS to pull images from ACR (works but needs owner permission)
+.......................................................................
+# Attach using acr-name
+az aks update -n aks-cluster-sudipta-1 -g rg-sudipta-demo-eastus-001 --attach-acr acrsudiptademoeastus
+
+# Attach using acr-resource-id
+$acrid = "/subscriptions/ed9f5531-fec4-4bac-b52c-a782a851d76d/resourceGroups/rg-sudipta-demo-eastus-001/providers/Microsoft.ContainerRegistry/registries/acrsudiptademoeastus"
+az aks update -n  aks-cluster-sudipta-1 -g rg-sudipta-demo-eastus-001 --attach-acr $acrid
+
+
+get / set context:
+..............................
+-- current cluster
+kubectl config current-context
+-- show all clusters
+kubectl config get-contexts
+-- change cluster
+kubectl config set-context <cluster-name>
+
+Quick deploy:
+...........................
+-- build local image
+docker build -t webhook:acr2 .
+-- tag local image
+docker tag webhook:acr2 acrsudiptademoeastus.azurecr.io/webhook:v2
+-- verify
+docker images
+-- login to ACR
+az acr login --name acrsudiptademoeastus
+-- push to ACR
+docker push acrsudiptademoeastus.azurecr.io/webhook:v2
+-- apply latest image to AKS
+kubectl apply -f deployment.yaml
+
+verify / troubleshoot:
+...........................
+-- verify pod is running
+kubectl get pods
+-- check logs
+kubectl logs [pod-name]
+-- check container logs
+kubectl logs <pod> -c <container-name>
+-- get inside the image
+docker run -it --rm <image-name> /bin/bash
+or, for minimal images like alpine
+docker run -it --rm invoker:acr1 /bin/sh
